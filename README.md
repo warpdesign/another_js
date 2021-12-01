@@ -1,7 +1,7 @@
 
 # Another World JS
 
-This is a fork of [another_js](https://github.com/cyxx/another_js) written by [@cxyxx](https://github.com/cyxx) which adds the following features:
+This is a fork of [another_js](https://github.com/cyxx/another_js) written by [@cyxx](https://github.com/cyxx) which adds the following features:
 
 * sound & music support (using Audio Worklet)
 * touch controls

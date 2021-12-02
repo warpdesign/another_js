@@ -1,6 +1,7 @@
 import * as Res from './ootwdemo-data'
 import { SfxPlayer } from './sound'
-import pako from 'pako'
+// import pako from 'pako'
+import * as fflate from 'fflate'
 import nipplejs from 'nipplejs';
 import './main.css'
 
@@ -9,6 +10,8 @@ const KEY_RIGHT  = 2;
 const KEY_DOWN   = 3;
 const KEY_LEFT   = 4;
 const KEY_ACTION = 5;
+
+let ticks = 0;
 
 function onPauseClick( ) {
     if ( pause( ) ) {
@@ -185,7 +188,7 @@ function bind_events() {
 	})
 }
 
-var keyboard = new Array( 6 );
+let keyboard = new Array( 6 );
 
 function is_key_pressed( code ) {
 	return keyboard[ code ];
@@ -228,23 +231,23 @@ const VAR_HERO_ACTION_POS_MASK = 0xfe;
 const VAR_PAUSE_SLICES         = 0xff;
 const VAR_MUSIC_SYNC           = 0xf4;
 
-var vars = new Array( 256 );
-var tasks = new Array( 64 );
+let vars = new Array( 256 );
+let tasks = new Array( 64 );
 
-var bytecode;
-var palette;
-var polygons1;
-var polygons2;
-var bytecode_offset;
-var task_num;
-var task_paused;
+let bytecode;
+let palette;
+let polygons1;
+let polygons2;
+let bytecode_offset;
+let task_num;
+let task_paused;
 
-var next_part;
-var current_part = 0;
+let next_part;
+let current_part = 0;
 
-var delay = 0;
-var timestamp;
-var touch_manager = null;
+let delay = 0;
+let timestamp;
+let touch_manager = null;
 
 function read_byte( ) {
 	const value = bytecode[ bytecode_offset ];
@@ -268,7 +271,7 @@ function to_signed( value, bits ) {
 	return value - ( ( value & mask ) << 1 );
 }
 
-var opcodes = {
+let opcodes = {
 	0x00 : function( ) {
 		const num = read_byte( );
 		const imm = to_signed( read_word( ), 16 );
@@ -330,7 +333,7 @@ var opcodes = {
 	0x0a : function( ) { // jmp_cond
 		const op = read_byte( );
 		const b = vars[ read_byte( ) ];
-		var a;
+		let a;
 		if ( op & 0x80 ) {
 			a = vars[ read_byte( ) ];
 		} else if ( op & 0x40 ) {
@@ -380,12 +383,12 @@ var opcodes = {
 		const end   = read_byte( );
 		const state = read_byte( );
 		if ( state == 2 ) {
-			for ( var i = start; i <= end; ++i ) {
+			for ( let i = start; i <= end; ++i ) {
 				tasks[ i ].next_offset = -2;
 			}
 		} else {
 			console.assert( state == 0 || state == 1 );
-			for ( var i = start; i <= end; ++i ) {
+			for ( let i = start; i <= end; ++i ) {
 				tasks[ i ].next_state = state;
 			}
 		}
@@ -463,7 +466,9 @@ var opcodes = {
 				set_palette_bmp( load( Res.bitmaps[ num ][ 0 ], 256 * 3 ) );
 				buffer8.set( load( Res.bitmaps[ num ][ 1 ], SCREEN_W * SCREEN_H ) );
 			} else {
+				const now = Date.now()
 				draw_bitmap( num );
+				console.log('drawn bitmap', Date.now() - now)
 			}
 		}
 	},
@@ -478,20 +483,23 @@ var opcodes = {
 
 function execute_task( ) {
 	while ( !task_paused ) {
+		const now = Date.now()
 		const opcode = read_byte( );
 		if ( opcode & 0x80 ) {
+			console.log('draw_shape')
 			const offset = ( ( ( opcode << 8 ) | read_byte() ) << 1 ) & 0xfffe;
-			var x = read_byte( );
-			var y = read_byte( );
-			var h = y - 199;
+			let x = read_byte( );
+			let y = read_byte( );
+			let h = y - 199;
 			if ( h > 0 ) {
 				y = 199;
 				x += h;
 			}
 			draw_shape( polygons1, offset, 0xff, 64, x, y );
 		} else if ( opcode & 0x40 ) {
+			console.log('draw_shape 2')
 			const offset = ( read_word( ) << 1) & 0xfffe;
-			var x = read_byte( );
+			let x = read_byte( );
 			if ( ( opcode & 0x20 ) == 0 ) {
 				if ( ( opcode & 0x10 ) == 0 ) {
 					x = ( x << 8 ) | read_byte( );
@@ -503,7 +511,7 @@ function execute_task( ) {
 					x += 256;
 				}
 			}
-			var y = read_byte( );
+			let y = read_byte( );
 			if ( ( opcode & 8 ) == 0 ) {
 				if ( ( opcode & 4 ) == 0 ) {
 					y = ( y << 8 ) | read_byte( );
@@ -511,8 +519,8 @@ function execute_task( ) {
 					y = vars[ y ];
 				}
                         }
-			var polygons = polygons1;
-			var zoom = 64;
+			let polygons = polygons1;
+			let zoom = 64;
 			if ( ( opcode & 2 ) == 0 ) {
 				if ( opcode & 1 ) {
 					zoom = vars[ read_byte( ) ];
@@ -530,11 +538,12 @@ function execute_task( ) {
 			console.assert( opcode <= 0x1a );
 			opcodes[ opcode ]( );
 		}
+		console.log('opCode', opcode, Date.now() - now)
 	}
 }
 
 function update_input( ) {
-	var mask = 0;
+	let mask = 0;
 	if ( is_key_pressed( KEY_RIGHT ) ) {
 		vars[ VAR_HERO_POS_LEFT_RIGHT ] = 1;
 		mask |= 1;
@@ -567,12 +576,16 @@ function update_input( ) {
 }
 
 function run_tasks( ) {
+	console.log('running taks', tasks.length)
+	// console.log('=====')
 	if ( next_part != 0 ) {
+		const now = Date.now()
 		restart( next_part );
 		current_part = next_part;
 		next_part = 0;
+		console.log('restart', Date.now() - now)
 	}
-	for ( var i = 0; i < tasks.length; ++i ) {
+	for ( let i = 0; i < tasks.length; ++i ) {
 		tasks[ i ].state = tasks[ i ].next_state;
 		const offset = tasks[ i ].next_offset;
 		if ( offset != -1 ) {
@@ -581,15 +594,19 @@ function run_tasks( ) {
 		}
 	}
 	update_input( );
-	for ( var i = 0; i < tasks.length; ++i ) {
+	for ( let i = 0; i < tasks.length; ++i ) {
 		if ( tasks[ i ].state == 0 ) {
 			const offset = tasks[ i ].offset;
 			if ( offset != -1 ) {
 				bytecode_offset = offset;
-				tasks[ i ].stack.length = 0;
+				// tasks[ i ].stack.length = 0;
+				tasks[i].stack = new Array()
 				task_num = i;
 				task_paused = false;
+				console.log('execute_task')
+				const now = Date.now()
 				execute_task( );
+				console.log('took..', Date.now() - now)
 				tasks[ i ].offset = bytecode_offset;
 			}
 		}
@@ -599,17 +616,19 @@ function run_tasks( ) {
 function load( data, size ) {
 	data = atob( data );
 	if ( data.length != size ) {
-		var len = data.length;
-		var bytes = new Uint8Array(len);
-		for (var i = 0; i < len; i++) {
+		// console.log('inflate!', size)
+		let len = data.length;
+		let bytes = new Uint8Array(len);
+		for (let i = 0; i < len; i++) {
 			bytes[i] = data.charCodeAt(i);
 		}
-		var buf = pako.inflate( bytes );
+		// let buf = pako.inflate( bytes );
+		let buf = fflate.decompressSync(bytes)
 		console.assert( buf.length == size );
 		return buf;
 	}
-	var buf = new Uint8Array( size );
-	for ( var i = 0; i < data.length; ++i ) {
+	let buf = new Uint8Array( size );
+	for ( let i = 0; i < data.length; ++i ) {
 		buf[ i ] = data.charCodeAt( i ) & 0xff;
 	}
 	return buf;
@@ -631,38 +650,39 @@ function restart( part ) {
 		bytecode  = load( Res.data1b, Res.size1b );
 		polygons1 = load( Res.data1c, Res.size1c );
 		polygons2 = load( Res.data11, Res.size11 );
-	} else if ( part == 16003 ) { // jail
-		palette   = load( Res.data1d, Res.size1d );
-		bytecode  = load( Res.data1e, Res.size1e );
-		polygons1 = load( Res.data1f, Res.size1f );
-		polygons2 = load( Res.data11, Res.size11 );
-	} else if ( part == 16004 ) { // 'cite'
-		palette   = load( Res.data20, Res.size20 );
-		bytecode  = load( Res.data21, Res.size21 );
-		polygons1 = load( Res.data22, Res.size22 );
-		polygons2 = load( Res.data11, Res.size11 );
-	} else if ( part == 16005 ) { // 'arene'
-		palette   = load( Res.data23, Res.size23 );
-		bytecode  = load( Res.data24, Res.size24 );
-		polygons1 = load( Res.data25, Res.size25 );
-		polygons2 = load( Res.data11, Res.size11 );
-	} else if ( part == 16006 ) { // 'luxe'
-		palette   = load( Res.data26, Res.size26 );
-		bytecode  = load( Res.data27, Res.size27 );
-		polygons1 = load( Res.data28, Res.size28 );
-		polygons2 = load( Res.data11, Res.size11 );
-	} else if ( part == 16007 ) { // 'final'
-		palette   = load( Res.data29, Res.size29 );
-		bytecode  = load( Res.data2a, Res.size2a );
-		polygons1 = load( Res.data2b, Res.size2b );
-		polygons2 = load( Res.data11, Res.size11 );
-	} else if ( part == 16008 ) { // password screen
-		palette   = load( Res.data7d, Res.size7d );
-		bytecode  = load( Res.data7e, Res.size7e );
-		polygons1 = load( Res.data7f, Res.size7f );
-		polygons2 = null;
 	}
-	for ( var i = 0; i < tasks.length; ++i ) {
+	// else if ( part == 16003 ) { // jail
+	// 	palette   = load( Res.data1d, Res.size1d );
+	// 	bytecode  = load( Res.data1e, Res.size1e );
+	// 	polygons1 = load( Res.data1f, Res.size1f );
+	// 	polygons2 = load( Res.data11, Res.size11 );
+	// } else if ( part == 16004 ) { // 'cite'
+	// 	palette   = load( Res.data20, Res.size20 );
+	// 	bytecode  = load( Res.data21, Res.size21 );
+	// 	polygons1 = load( Res.data22, Res.size22 );
+	// 	polygons2 = load( Res.data11, Res.size11 );
+	// } else if ( part == 16005 ) { // 'arene'
+	// 	palette   = load( Res.data23, Res.size23 );
+	// 	bytecode  = load( Res.data24, Res.size24 );
+	// 	polygons1 = load( Res.data25, Res.size25 );
+	// 	polygons2 = load( Res.data11, Res.size11 );
+	// } else if ( part == 16006 ) { // 'luxe'
+	// 	palette   = load( Res.data26, Res.size26 );
+	// 	bytecode  = load( Res.data27, Res.size27 );
+	// 	polygons1 = load( Res.data28, Res.size28 );
+	// 	polygons2 = load( Res.data11, Res.size11 );
+	// } else if ( part == 16007 ) { // 'final'
+	// 	palette   = load( Res.data29, Res.size29 );
+	// 	bytecode  = load( Res.data2a, Res.size2a );
+	// 	polygons1 = load( Res.data2b, Res.size2b );
+	// 	polygons2 = load( Res.data11, Res.size11 );
+	// } else if ( part == 16008 ) { // password screen
+	// 	palette   = load( Res.data7d, Res.size7d );
+	// 	bytecode  = load( Res.data7e, Res.size7e );
+	// 	polygons1 = load( Res.data7f, Res.size7f );
+	// 	polygons2 = null;
+	// }
+	for ( let i = 0; i < tasks.length; ++i ) {
 		tasks[ i ] = { state : 0, next_state : 0, offset : -1, next_offset : -1 };
 		tasks[ i ].stack = new Array( );
 	}
@@ -674,22 +694,22 @@ const SCREEN_W = 320 * SCALE;
 const SCREEN_H = 200 * SCALE;
 const PAGE_SIZE = SCREEN_W * SCREEN_H;
 
-var buffer8 = new Uint8Array( 4 * PAGE_SIZE );
-var palette32 = new Uint32Array( 16 * 3 ); // Amiga, EGA, VGA
-var current_page0; // current
-var current_page1; // front
-var current_page2; // back
-var next_palette = -1;
+let buffer8 = new Uint8Array( 4 * PAGE_SIZE );
+let palette32 = new Uint32Array( 16 * 3 ); // Amiga, EGA, VGA
+let current_page0; // current
+let current_page1; // front
+let current_page2; // back
+let next_palette = -1;
 
 const PALETTE_TYPE_AMIGA = 0;
 const PALETTE_TYPE_EGA = 1;
 const PALETTE_TYPE_VGA = 2;
 
-var palette_type = PALETTE_TYPE_AMIGA;
+let palette_type = PALETTE_TYPE_AMIGA;
 
-var is_1991; // 320x200
+let is_1991; // 320x200
 
-var palette_bmp = new Uint32Array( 256 * 3 ); // 15th edition backgrounds
+let palette_bmp = new Uint32Array( 256 * 3 ); // 15th edition backgrounds
 
 function get_page( num ) {
 	if ( num == 0xff ) {
@@ -781,7 +801,7 @@ function draw_line( page, color, y, x1, x2 ) {
 		console.assert( page != 0 );
 		buffer8.set( buffer8.subarray( y * SCREEN_W + x1, y * SCREEN_W + x2 + 1 ), offset + x1 );
 	} else if ( color == 0x10 ) {
-		for ( var i = x1; i <= x2; ++i ) {
+		for ( let i = x1; i <= x2; ++i ) {
 			buffer8[ offset + i ] |= 8;
 		}
 	} else {
@@ -792,12 +812,12 @@ function draw_line( page, color, y, x1, x2 ) {
 
 function draw_polygon( page, color, vertices ) {
 	// scanline fill
-	var i = 0;
-	var j = vertices.length - 1;
-	var scanline = Math.min( vertices[ i ].y, vertices[ j ].y );
-	var f2 = vertices[ i++ ].x << 16;
-	var f1 = vertices[ j-- ].x << 16;
-	var count = vertices.length;
+	let i = 0;
+	let j = vertices.length - 1;
+	let scanline = Math.min( vertices[ i ].y, vertices[ j ].y );
+	let f2 = vertices[ i++ ].x << 16;
+	let f1 = vertices[ j-- ].x << 16;
+	let count = vertices.length;
 	for ( count -= 2; count != 0; count -= 2 ) {
 		const h1 = vertices[ j ].y - vertices[ j + 1 ].y;
 		const step1 = ( ( ( vertices[ j ].x - vertices[ j + 1 ].x ) << 16 ) / ( h1 == 0 ? 1 : h1 ) ) >> 0;
@@ -811,7 +831,7 @@ function draw_polygon( page, color, vertices ) {
 			f1 += step1;
 			f2 += step2;
 		} else {
-			for ( var k = 0; k < h2; ++k ) {
+			for ( let k = 0; k < h2; ++k ) {
 				if ( scanline >= 0 ) {
 					draw_line( page, color, scanline, f1 >> 16, f2 >> 16 );
 				}
@@ -838,8 +858,8 @@ function fill_polygon( data, offset, color, zoom, x, y ) {
 	}
 	const count = data[ offset++ ];
 	console.assert( ( count & 1 ) == 0 );
-	var vertices = new Array( );
-	for ( var i = 0; i < count; ++i ) {
+	let vertices = new Array( );
+	for ( let i = 0; i < count; ++i ) {
 		const vx = x1 + ( ( data[ offset++ ] * zoom / 64 ) >> 0 ) * SCALE;
 		const vy = y1 + ( ( data[ offset++ ] * zoom / 64 ) >> 0 ) * SCALE;
 		vertices.push( { x : vx, y : vy } );
@@ -855,11 +875,11 @@ function draw_shape_parts( data, offset, zoom, x, y ) {
 	const x0 = x - ( data[ offset++ ] * zoom / 64 ) >> 0;
 	const y0 = y - ( data[ offset++ ] * zoom / 64 ) >> 0;
 	const count = data[ offset++ ];
-	for ( var i = 0; i <= count; ++i ) {
+	for ( let i = 0; i <= count; ++i ) {
 		const addr = ( data[ offset ] << 8 ) | data[ offset + 1 ]; offset += 2;
 		const x1 = x0 + ( data[ offset++ ] * zoom / 64 ) >> 0;
 		const y1 = y0 + ( data[ offset++ ] * zoom / 64 ) >> 0;
-		var color = 0xff;
+		let color = 0xff;
 		if ( addr & 0x8000 ) {
 			color = data[ offset ] & 0x7f; offset += 2;
 		}
@@ -882,8 +902,8 @@ function draw_shape( data, offset, color, zoom, x, y ) {
 }
 
 function put_pixel( page, x, y, color ) {
-	var offset = page * PAGE_SIZE + ( y * SCREEN_W + x ) * SCALE;
-	for ( var j = 0; j < SCALE; ++j ) {
+	let offset = page * PAGE_SIZE + ( y * SCREEN_W + x ) * SCALE;
+	for ( let j = 0; j < SCALE; ++j ) {
 		buffer8.fill( color, offset, offset + SCALE );
 		offset += SCREEN_W;
 	}
@@ -891,9 +911,9 @@ function put_pixel( page, x, y, color ) {
 
 function draw_char( page, chr, color, x, y ) {
 	if ( x < ( 320 / 8 ) && y < ( 200 - 8 ) ) {
-		for ( var j = 0; j < 8; ++j ) {
+		for ( let j = 0; j < 8; ++j ) {
 			const mask = Res.font[ ( chr - 32 ) * 8 + j ];
-			for ( var i = 0; i < 8; ++i ) {
+			for ( let i = 0; i < 8; ++i ) {
 				if ( ( mask & ( 1 << ( 7 - i ) ) ) != 0 ) {
 					put_pixel( page, x * 8 + i, y + j, color );
 				}
@@ -905,17 +925,17 @@ function draw_char( page, chr, color, x, y ) {
 const STRINGS_LANGUAGE_EN = 0;
 const STRINGS_LANGUAGE_FR = 1;
 
-var strings_language = STRINGS_LANGUAGE_EN;
+let strings_language = STRINGS_LANGUAGE_EN;
 
 function draw_string( num, color, x, y ) {
-	var strings = Res.strings_en;
+	let strings = Res.strings_en;
 	if ( strings_language == STRINGS_LANGUAGE_FR && ( num in Res.strings_fr ) ) {
 		strings = Res.strings_fr;
 	}
 	if ( num in strings ) {
 		const x0 = x;
 		const str = strings[ num ];
-		for ( var i = 0; i < str.length; ++i ) {
+		for ( let i = 0; i < str.length; ++i ) {
 			const chr = str.charCodeAt( i );
 			if ( chr == 10 ) {
 				y += 8;
@@ -932,13 +952,13 @@ function draw_bitmap( num ) {
 	const size = Res.bitmaps[ num ][ 1 ];
 	console.assert( size == 32000 );
 	const buf = load( Res.bitmaps[ num ][ 0 ], size );
-	var offset = 0;
-	for ( var y = 0; y < 200; ++y ) {
-		for ( var x = 0; x < 320; x += 8 ) {
-			for ( var b = 0; b < 8; ++b ) {
+	let offset = 0;
+	for ( let y = 0; y < 200; ++y ) {
+		for ( let x = 0; x < 320; x += 8 ) {
+			for ( let b = 0; b < 8; ++b ) {
 				const mask = 1 << ( 7 - b );
-				var color = 0;
-				for ( var p = 0; p < 4; ++p ) {
+				let color = 0;
+				for ( let p = 0; p < 4; ++p ) {
 					if ( buf[ offset + p * 8000 ] & mask ) {
 						color |= 1 << p;
 					}
@@ -970,35 +990,36 @@ const PALETTE_EGA = [
 ];
 
 function set_palette_ega( offset ) {
-	for ( var i = 0; i < 16; ++i ) {
-		var color = ( palette[ offset + i * 2 ] << 8 ) | palette[ offset + i * 2 + 1 ];
+	for ( let i = 0; i < 16; ++i ) {
+		let color = ( palette[ offset + i * 2 ] << 8 ) | palette[ offset + i * 2 + 1 ];
 		color = (( color >> 12 ) & 15 ) * 3;
 		palette32[ PALETTE_TYPE_EGA * 16 + i ] = 0xff000000 | ( PALETTE_EGA[ color + 2 ] << 16 ) | ( PALETTE_EGA[ color + 1 ] << 8 ) | PALETTE_EGA[ color ];
 	}
 }
 
 function set_palette_444( offset, type ) {
-	for ( var i = 0; i < 16; ++i ) {
+	for ( let i = 0; i < 16; ++i ) {
 		const color = ( palette[ offset + i * 2 ] << 8 ) | palette[ offset + i * 2 + 1 ];
-		var r = ( color >> 8 ) & 15;
+		let r = ( color >> 8 ) & 15;
 		r = ( r << 4 ) | r;
-		var g = ( color >> 4 ) & 15;
+		let g = ( color >> 4 ) & 15;
 		g = ( g << 4 ) | g;
-		var b = color & 15;
+		let b = color & 15;
 		b = ( b << 4 ) | b;
 		palette32[ type * 16 + i ] = 0xff000000 | ( b << 16 ) | ( g << 8 ) | r;
 	}
 }
 
 function set_palette_bmp( data ) {
-	var color = 0;
-	for ( var i = 0; i < 256; ++i ) {
+	let color = 0;
+	for ( let i = 0; i < 256; ++i ) {
 		palette_bmp[ i ] = 0xff000000 | ( data[ color + 2 ] << 16 ) | ( data[ color + 1 ] << 8 ) | data[ color ];
 		color += 3;
 	}
 }
 
 function update_display( num ) {
+	const now = Date.now()
 	// console.log(`Script::op_updateDisplay(${num})`)
 	if ( num != 0xfe ) {
 		if ( num == 0xff ) {
@@ -1017,12 +1038,13 @@ function update_display( num ) {
 		next_palette = -1;
 	}
 	update_screen( current_page1 * PAGE_SIZE );
+	console.log('update_display', Date.now() - now)
 }
 
 const REWIND_SIZE = 10;
 const REWIND_INTERVAL = 5000;
-var rewind_buffer = new Array( );
-var rewind_timestamp;
+let rewind_buffer = new Array( );
+let rewind_timestamp;
 
 function save_state( ) {
 	return { vars: vars.slice( ), tasks: JSON.parse( JSON.stringify( tasks ) ), buffer8: buffer8.slice( ), palette32: palette32.slice( ) }
@@ -1054,10 +1076,18 @@ function reset( ) {
 }
 
 function tick( ) {
+	let tasks = 0
+	ticks++
+	// if (ticks === 60) {
+	// 	pause()
+	// 	return
+	// }
 	const current = Date.now( );
+	console.log('tick', ticks, 'delay=', delay, 'start=', current-start_time)
 	delay -= current - timestamp;
 	while ( delay <= 0 ) {
 		run_tasks( );
+		tasks++
 	}
 	timestamp = current;
 
@@ -1068,12 +1098,14 @@ function tick( ) {
 		rewind_buffer.push( save_state( ) );
 		rewind_timestamp = current;
 	}
+	console.log(`${tasks} tasks`, 'time=', Date.now() - current)
 }
 
 const INTERVAL = 50;
-var canvas;
-var timer;
-var player;
+let canvas;
+let timer;
+let player;
+let start_time;
 
 start.onclick = function () {
 	start.style.display = 'none'
@@ -1081,6 +1113,7 @@ start.onclick = function () {
 }
 
 async function init( name ) {
+	start_time = Date.now()
 	canvas = document.getElementById( name );
 	player = new SfxPlayer((variable, value) => {
 		vars[variable] = value
@@ -1097,6 +1130,7 @@ async function init( name ) {
 }
 
 function pause( ) {
+	console.log('paused', ticks)
 	if ( timer ) {
 		clearInterval( timer );
 		timer = null;
@@ -1109,7 +1143,7 @@ function pause( ) {
 function rewind( ) {
 	if ( rewind_buffer.length != 0 ) {
 		// console.log( 'rewind pos:' + rewind_buffer.length );
-		var state = rewind_buffer.pop( );
+		let state = rewind_buffer.pop( );
 		load_state( state );
 	}
 }
@@ -1133,15 +1167,17 @@ function set_1991_resolution( low ) {
 }
 
 function update_screen( offset ) {
-	var context = canvas.getContext( '2d' );
-	var data = context.getImageData( 0, 0, SCREEN_W, SCREEN_H );
-	var rgba = new Uint32Array( data.data.buffer );
+	const now = Date.now()
+	let context = canvas.getContext( '2d' );
+	let data = context.getImageData( 0, 0, SCREEN_W, SCREEN_H );
+
+	let rgba = new Uint32Array( data.data.buffer );
 	if ( is_1991 ) {
-		var rgba_offset = 0;
-		for ( var y = 0; y < SCREEN_H; y += SCALE ) {
-			for ( var x = 0; x < SCREEN_W; x += SCALE ) {
+		let rgba_offset = 0;
+		for ( let y = 0; y < SCREEN_H; y += SCALE ) {
+			for ( let x = 0; x < SCREEN_W; x += SCALE ) {
 				const color = palette32[ palette_type * 16 + buffer8[ offset + x ] ];
-				for ( var j = 0; j < SCALE; ++j ) {
+				for ( let j = 0; j < SCALE; ++j ) {
 					rgba.fill( color, rgba_offset + j * SCREEN_W + x, rgba_offset + j * SCREEN_W + x + SCALE );
 				}
 			}
@@ -1149,7 +1185,7 @@ function update_screen( offset ) {
 			offset += SCREEN_W * SCALE;
 		}
 	} else {
-		for ( var i = 0; i < SCREEN_W * SCREEN_H; ++i ) {
+		for ( let i = 0; i < SCREEN_W * SCREEN_H; ++i ) {
 			const color = buffer8[ offset + i ];
 			if ( color < 16 ) {
 				rgba[ i ] = palette32[ palette_type * 16 + color ];
@@ -1158,7 +1194,10 @@ function update_screen( offset ) {
 			}
 		}
 	}
+	let data_time = Date.now()
+	console.log('got data', data_time - now)
 	context.putImageData( data, 0, 0 );
+	console.log('update_screen', Date.now() - data_time)
 }
 
 function play_music(resNum, delay, pos) {

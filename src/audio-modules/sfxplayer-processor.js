@@ -286,13 +286,13 @@ class SfxPlayerProcessor extends AudioWorkletProcessor {
                     }
                     this._channels[channel].volume = m
                     pat.sampleVolume = m
-                    console.log(`SfxPlayer::handlePattern() vol=${pat.sampleVolume} start=${pat.sampleStart} buf=[0x${pat.sampleBuffer[0].toString(16)},0x${pat.sampleBuffer[1].toString(16)},0x${pat.sampleBuffer[2].toString(16)},0x${pat.sampleBuffer[3].toString(16)},...] len=${pat.sampleLen} loopPos=${pat.loopPos} loopLen=${pat.loopLen} notes`)
+                    // console.log(`SfxPlayer::handlePattern() vol=${pat.sampleVolume} start=${pat.sampleStart} buf=[0x${pat.sampleBuffer[0].toString(16)},0x${pat.sampleBuffer[1].toString(16)},0x${pat.sampleBuffer[2].toString(16)},0x${pat.sampleBuffer[3].toString(16)},...] len=${pat.sampleLen} loopPos=${pat.loopPos} loopLen=${pat.loopLen} notes`)
                 }
             }
         }
 
         if (pat.note_1 === 0xFFFD) {
-            console.log(`SfxPlayer::handlePattern() _scriptVars[0xF4] = 0x${pat.note_2.toString(16)}`)
+            // console.log(`SfxPlayer::handlePattern() _scriptVars[0xF4] = 0x${pat.note_2.toString(16)}`)
             // *_syncVar = pat.note_2;
             // this._syncVar = pat.note_2
             this.postMessage({

@@ -95,19 +95,24 @@ function bind_events() {
 	paletteSelect.onchange = onPaletteChange
 	partSelect.onchange = onPartChange
 	resolutionCheckbox.onclick = onLowResolutionClick
-	document.onfullscreenchange = () => {
-		if (!document.fullscreenElement) {
-			document.exitFullscreen()
+	document.onfullscreenchange = document.onwebkitfullscreenchange = () => {
+		if (!document.fullscreenElement && !document.webkitFullscreenElement) {
 			onFullscreenChange(false)
+		} else {
+			onFullscreenChange(true)
 		}
 	}
 	game.ondblclick = () => {
-		if (document.fullscreenElement) {
-			document.exitFullscreen()
-			onFullscreenChange(false)
+		if (document.webkitFullscreenElement || document.fullscreenElement) {
+			if (document.exitFullscreen)
+				document.exitFullscreen()
+			else if (document.webkitExitFullscreen)
+				document.webkitExitFullscreen()			
 		} else {
-			game.requestFullscreen()
-			onFullscreenChange(true)
+			if (game.requestFullscreen)
+				game.requestFullscreen()
+			else if (game.webkitRequestFullscreen)
+				game.webkitRequestFullscreen()			
 		}
 	}
 

@@ -52,9 +52,10 @@ export class SfxPlayer {
             console.log('SfxPlayer::initAudio')
             this._rate = this._audioContext.sampleRate
     
-            await this._audioContext.audioWorklet.addModule('sfxplayer-processor.js')
-            await this._audioContext.audioWorklet.addModule('sfxraw-processor.js')
+            console.log('Adding module processors')
+            await this._audioContext.audioWorklet.addModule('processors.js')
 
+            console.log('Creating worklet raw')
             this._sfxRawWorklet = new AudioWorkletNode(this._audioContext, 'sfxraw-processor', {
                 outputChannelCount: [1],
                 numberOfInputs: 0,
@@ -64,6 +65,7 @@ export class SfxPlayer {
             this._sfxRawWorklet.port.onmessage = this.onSFXRawProcessorMessage.bind(this)
             this._sfxRawWorklet.port.start()
 
+            console.log('Creating worklet sfxplayer')
             this._sfxPlayerWorklet = new AudioWorkletNode(this._audioContext, 'sfxplayer-processor', {
                 outputChannelCount: [2],
                 numberOfInputs: 0,

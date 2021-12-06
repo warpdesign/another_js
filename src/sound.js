@@ -213,6 +213,26 @@ export class SfxPlayer {
         })
     }
 
+    pause() {
+        this.postMessageToSFXRawProcessor({
+            message: 'pause',
+        })
+
+        this.postMessageToSFXPlayerProcessor({
+            message: 'pause',
+        })        
+    }
+
+    resume() {
+        this.postMessageToSFXRawProcessor({
+            message: 'resume',
+        })
+
+        this.postMessageToSFXPlayerProcessor({
+            message: 'resume',
+        })        
+    }
+
     playSoundRaw(channel, data, freq, volume) {
 		let len = read_be_uint16(data) * 2
 		const loopLen = read_be_uint16(data, 2) * 2
@@ -235,7 +255,7 @@ export class SfxPlayer {
 		}        
     }
 
-    stopSound(channel) {
+    stopSoundChannel(channel) {
         this.postMessageToSFXRawProcessor({
             message: 'stop',
             channel

@@ -1161,9 +1161,14 @@ function pause( ) {
 	if ( timer ) {
 		clearInterval( timer );
 		timer = null;
+		player.pause();
 		return true;
 	}
+	// reset timestamp otherwise engine
+	// would skip <pause duration> time
+	timestamp = Date.now()
 	timer = setInterval( tick, INTERVAL );
+	player.resume()
 	return false;
 }
 
@@ -1237,7 +1242,7 @@ function play_music(resNum, delay, pos) {
 
 function play_sound(resNum, freq, vol, channel) {
 	if (vol === 0) {
-		player.stopSound(channel)
+		player.stopSoundChannel(channel)
 		return
 	}
 	if (vol > 63) {

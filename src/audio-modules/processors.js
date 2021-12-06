@@ -13,6 +13,7 @@ class SfxRawProcessor extends AudioWorkletProcessor {
     _playing = false
     _channels = new Array(4).fill(null).map(() => CreateRawChannel())
     _mixingRate = 0
+    _previousPlaying = [] 
 
     constructor() {
         super()
@@ -38,8 +39,34 @@ class SfxRawProcessor extends AudioWorkletProcessor {
                 const { channel } = event.data
                 const chan = this._channels[channel]
                 chan.playing = false
+                break
+            }
+
+            case 'pause': {
+                if (this._playing)
+                    this.pause()
+
+                break
+            }
+
+            case 'resume': {
+                this.resume()
+                break
             }
         }
+    }
+
+    resume() {
+        for(let channel of this._previousPlaying) {
+            channel.playing = true
+        }
+        this._playing = true
+    }
+
+    pause() {
+        this._previousPlaying.length = 0
+        this._previousPlaying = this._channels.filter(channel => channel.playing)
+        this._playing = false
     }
 
     play(sound, channel) {
@@ -72,7 +99,7 @@ class SfxRawProcessor extends AudioWorkletProcessor {
     }
 
     process(inputs, outputs, params) {
-        if (this._ready) {
+        if (this._ready && this._playing) {
             this.mixChannels(outputs[0], outputs[0][0].length)
         }
 
@@ -202,6 +229,18 @@ class SfxPlayerProcessor extends AudioWorkletProcessor {
                 this._delay = delay
                 break
             }
+
+            case 'pause': {
+                if (this._playing)
+                    this.pause()
+
+                break
+            }
+
+            case 'resume': {
+                this.resume()
+                break
+            }            
         }
     }
 
@@ -227,6 +266,14 @@ class SfxPlayerProcessor extends AudioWorkletProcessor {
         this._rate = rate
         this._samplesLeft = 0
         this._channels = this._channels.map(() => CreateChannel())        
+    }
+
+    pause() {
+        this._playing = false
+    }
+
+    resume() {
+        this._playing = true
     }
 
     mixSfxPlayer(inp, out, len) {

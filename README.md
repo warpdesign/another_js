@@ -6,6 +6,7 @@ This is a fork of [another_js](https://github.com/cyxx/another_js) written by [@
 * sound & music support (using Audio Worklet)
 * touch controls
 * fullscreen support
+* fixes pause bug: resuming would skip time elapsed during pause
 * webpack build
 
 This is a Javascript (HTML5) port of the game <a href="https://www.mobygames.com/game/out-of-this-world">Another World</a> designed by <a href="http://www.anotherworld.fr/">Eric Chahi</a> with the following features:

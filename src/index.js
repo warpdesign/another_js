@@ -20,10 +20,6 @@ const IS_IOS = [
   // iPad on iOS 13 detection
   || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
 
- function isPortrait() {
-	 return window.matchMedia("(orientation: portrait)").matches
- }
-
 function onPauseClick( ) {
     if ( pause( ) ) {
         pauseButton.value = "Play";
@@ -51,22 +47,28 @@ function onLowResolutionClick( e ) {
 }
 
 function getFullscreenSize() {
-	const portrait = isPortrait()
 	const width = IS_IOS ? window.innerWidth : screen.width
 	const height = IS_IOS ? window.innerHeight : screen.height
-	const isFirefox = navigator.userAgent.match(/Firefox/)
 	const ratio = width / height
+	const gameRatio = SCREEN_W / SCREEN_H
+	let newHeight = height
 	let newWidth = width
-	let newHeight = width * ratio
-	if (ratio > 0) {
-		newHeight = height
-		newWidth = newHeight * ratio
+
+	if (ratio > gameRatio) {
+		newWidth = gameRatio * newHeight 
+	} else if (ratio < gameRatio) {
+		newHeight = newWidth / gameRatio
 	}
+
+	console.log('getFullscreenSize', { width, height, newWidth, newHeight, ratio, gameRatio })
+
 	return {
-		width: newWidth,
-		height: newHeight,
-		top: isFirefox ? (height - newHeight) / 2 : 0,
-		left: isFirefox ? (width - newWidth) / 2 : 0
+		canvasWidth: newWidth,
+		canvasHeight: newHeight,
+		width,
+		height,
+		top: (newHeight < height) ? (height - newHeight) / 2 : 0,
+		left: (newWidth < width) ? (width - newWidth) / 2 : 0
 	}
 }
 
@@ -76,20 +78,18 @@ function onFullscreenChange(isFullscreen) {
 		const {
 			width,
 			height,
+			canvasWidth,
+			canvasHeight,
 			top,
 			left
 		} = getFullscreenSize()
-		console.log({
-			width,
-			height,
-			top,
-			left
-		})
+
 		let style = game.style
 		style.width = `${width}px`
 		style.height = `${height}px`
 		style.top = '0'
 		style.left = '0'
+		style.backgroundColor = 'black'
 		if (IS_IOS) {
 			style.position = 'absolute';
 		}
@@ -98,10 +98,11 @@ function onFullscreenChange(isFullscreen) {
 		style.position = 'relative'
 		style.top = `${top}px`
 		style.left = `${left}px`
-		style.width = `${width}px`
-		style.height = `${height}px`
+		style.width = `${canvasWidth}px`
+		style.height = `${canvasHeight}px`
 	} else {
 		let style = game.style
+		style.removeProperty('background-color')
 		style.removeProperty('width')
 		style.removeProperty('height')
 		style.removeProperty('top')
@@ -131,7 +132,14 @@ function bind_events() {
 	paletteSelect.onchange = onPaletteChange
 	partSelect.onchange = onPartChange
 	resolutionCheckbox.onclick = onLowResolutionClick
-	console.log('is_ios', IS_IOS, 'is_portrait', isPortrait())
+	console.log('is_ios', IS_IOS)
+	const mql = window.matchMedia("(orientation: portrait)");
+	// resize window size on orientation
+	mql.onchange = function() {
+		if (is_fullscreen) {
+			onFullscreenChange(true)
+		}
+	}
 	if (!IS_IOS) {
 		document.onfullscreenchange = document.onwebkitfullscreenchange = () => {
 			if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -142,8 +150,6 @@ function bind_events() {
 				onFullscreenChange(true)
 			}
 		}
-	} else {
-
 	}
 
 	game.ondblclick = (e) => {
@@ -179,7 +185,8 @@ function bind_events() {
 			left: '50%',
 			top: '50%'
 		},
-		dynamicPage: true
+		dynamicPage: true,
+		restOpacity: .3
 	});
 
 	touch_manager.on('dir:right', function (evt, data) {
@@ -220,7 +227,8 @@ function bind_events() {
 			left: '50%',
 			top: '50%'
 		},
-		dynamicPage: true
+		dynamicPage: true,
+		restOpacity: .3
 	});
 
 	button.on('start end', (evt) => {

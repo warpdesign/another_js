@@ -90,12 +90,10 @@ function onFullscreenChange(isFullscreen) {
 		style.top = '0'
 		style.left = '0'
 		style.backgroundColor = 'black'
-		if (IS_IOS) {
-			style.position = 'absolute';
-		}
+		style.position = 'absolute'
 
 		style = canvas.style
-		style.position = 'relative'
+		style.position = 'absolute'
 		style.top = `${top}px`
 		style.left = `${left}px`
 		style.width = `${canvasWidth}px`
@@ -107,18 +105,14 @@ function onFullscreenChange(isFullscreen) {
 		style.removeProperty('height')
 		style.removeProperty('top')
 		style.removeProperty('left')
-		if (IS_IOS) {
-			style.removeProperty('position')
-		}
+		style.removeProperty('position')
 
 		style = canvas.style
 		style.removeProperty('top')
 		style.removeProperty('left')
 		style.removeProperty('width')
 		style.removeProperty('height')
-		if (IS_IOS) {
-			style.removeProperty('position')
-		}		
+		style.removeProperty('position')
 	}
 }
 

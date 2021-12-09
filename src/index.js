@@ -255,18 +255,24 @@ function set_key_pressed( e, state ) {
 	const jcode = e.keyCode
 
 	if ( jcode == 37 ) {
+		e.preventDefault();
 		keyboard[ KEY_LEFT ] = state;
 	} else if ( jcode == 38 ) {
+		e.preventDefault();
 		keyboard[ KEY_UP ] = state;
 	} else if ( jcode == 39 ) {
+		e.preventDefault();
 		keyboard[ KEY_RIGHT ] = state;
 	} else if ( jcode == 40 ) {
+		e.preventDefault();
 		keyboard[ KEY_DOWN ] = state;
 	} else if ( jcode == 32 || jcode == 13 ) {
 		e.preventDefault();
-		keyboard[ KEY_ACTION ] = state;
-	} else if (jcode === 8 || jcode === 9) {
-		change_part(1);
+		if (!next_part && current_part !== 16002) {
+			change_part(1)
+		} else {
+			keyboard[ KEY_ACTION ] = state;
+		}
 	}
 }
 

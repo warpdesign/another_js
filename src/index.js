@@ -1139,7 +1139,8 @@ let timer;
 let player;
 
 start.onclick = function () {
-	start.style.display = 'none'
+	preload.style.display = 'none'
+	game.style.display = 'block'
 	init('screen')
 }
 

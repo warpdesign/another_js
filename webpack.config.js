@@ -35,6 +35,7 @@ module.exports = {
     new CopyPlugin({
         patterns: [
           { from: "src/audio-modules", to: "." },
+          { from: "screenshot-water-640.png", to: "." }
         ],
       }),
     new CleanWebpackPlugin(),

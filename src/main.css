@@ -31,6 +31,7 @@ footer {
 }
 
 #game {
+    display: none;
     position: relative;
     width: 640px;
 }
@@ -62,4 +63,22 @@ footer {
 .square2 {
     left: auto;
     right: 10px;
+}
+
+#preload {
+    position: relative;
+    display: inline-block;
+}
+
+#start {
+    position: absolute;
+    cursor: pointer;
+    background-color:rgba(255, 255, 255, .5);
+    color: white;
+    font-size: 5rem;
+    border: none;
+    left: 0;
+    right: 0;
+    width: 100%;    
+    top: calc(50% - 2.5rem);
 }

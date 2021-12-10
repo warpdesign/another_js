@@ -15,7 +15,7 @@ This is a Javascript (HTML5) port of the game <a href="https://www.mobygames.com
 * switch between the original 320x200 and 640x400 resolutions
 * rewind game play
 
-![Screenshot Water](screenshot-water-640.png)
+![Screenshot Water](screenshot-640.png)
 
 ## Demo
 
